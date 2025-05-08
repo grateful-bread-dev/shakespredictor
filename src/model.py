@@ -1,12 +1,15 @@
 import os
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Embedding, LSTM, Dense
+from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout
 
 def create_model(vocab_size, max_len):
     """Create and return the LSTM model."""
     model = Sequential([
-        Embedding(vocab_size, 64, input_length=max_len),
+        Embedding(vocab_size, 128, input_length=max_len),
+        LSTM(128, return_sequences=True),
+        Dropout(0.2),
         LSTM(64),
+        Dropout(0.2),
         Dense(vocab_size, activation='softmax')
     ])
     

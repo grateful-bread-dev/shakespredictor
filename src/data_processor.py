@@ -2,6 +2,7 @@ import pdfplumber
 import os
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import numpy as np
 
 def load_text_from_pdf(pdf_path):
     """Load and extract text from PDF file."""
@@ -21,30 +22,34 @@ def load_text_from_pdf(pdf_path):
     except Exception as e:
         raise Exception(f"Error processing PDF: {str(e)}")
 
-def prepare_sequences(text):
-    """Prepare input and output sequences from text."""
+def prepare_sequences(text, sequence_length=10):
+    """Prepare input and output sequences from text using sliding window."""
     if not text or not isinstance(text, str):
         raise ValueError("Invalid text input")
-        
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
     
-    if len(lines) < 2:
-        raise ValueError("Text must contain at least 2 lines for training")
+    # Clean and tokenize text
+    words = text.lower().split()
     
-    input_lines = lines[:-1]
-    output_lines = lines[1:]
+    if len(words) < sequence_length + 1:
+        raise ValueError(f"Text must contain at least {sequence_length + 1} words")
     
-    # Tokenize text
+    # Create tokenizer and fit on words
     tokenizer = Tokenizer()
-    tokenizer.fit_on_texts(input_lines + output_lines)
+    tokenizer.fit_on_texts([words])
     
-    # Convert to sequences
-    input_seq = tokenizer.texts_to_sequences(input_lines)
-    output_seq = tokenizer.texts_to_sequences(output_lines)
+    # Convert words to sequences
+    sequences = tokenizer.texts_to_sequences([words])[0]
     
-    # Pad sequences
-    max_len = max(len(seq) for seq in input_seq + output_seq)
-    input_seq = pad_sequences(input_seq, maxlen=max_len, padding='post')
-    output_seq = pad_sequences(output_seq, maxlen=max_len, padding='post')
+    # Create input sequences and labels
+    input_sequences = []
+    output_sequences = []
     
-    return input_seq, output_seq, tokenizer, max_len 
+    for i in range(len(sequences) - sequence_length):
+        input_sequences.append(sequences[i:i + sequence_length])
+        output_sequences.append(sequences[i + sequence_length])
+    
+    # Convert to numpy arrays
+    input_sequences = np.array(input_sequences)
+    output_sequences = np.array(output_sequences)
+    
+    return input_sequences, output_sequences, tokenizer, sequence_length 
